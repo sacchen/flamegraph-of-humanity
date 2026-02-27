@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flamegraph of Humanity</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #f7f2e6;
+    --panel: #fbf6eb;
+    --line: #d7c8ab;
+    --line-strong: #b89d72;
+    --text: #23170c;
+    --muted: #6b563c;
+    --accent: #9d4111;
+
+    --root-a: #eed34f;
+    --root-b: #d39c13;
+    --food-a: #f2b56b;
+    --food-b: #e77a20;
+    --sleep-a: #f3cb73;
+    --sleep-b: #eca13a;
+    --care-a: #f0a068;
+    --care-b: #e15b33;
+    --illness-a: #ef9a84;
+    --illness-b: #d65b49;
+    --build-a: #f6d77e;
+    --build-b: #e6b23b;
+    --social-a: #f0a27b;
+    --social-b: #dd6f4f;
+    --meaning-a: #f6bf7f;
+    --meaning-b: #ee9653;
+    --move-a: #f5c48d;
+    --move-b: #e7954a;
+    --coercion-a: #eb8a6e;
+    --coercion-b: #cb4732;
+    --abstract-a: #f1b173;
+    --abstract-b: #e28439;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f8f3e8, #f1e7d1 210px, var(--bg) 210px);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    position: relative;
+  }
+
+  .home-link {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 9999;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.8);
+    color: #666;
+    text-decoration: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    transition: all 0.2s ease;
+  }
+
+  .home-link:hover {
+    color: #000;
+    border-color: #bbb;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+
+  header {
+    padding: 28px 40px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-size: clamp(24px, 4vw, 36px);
+    line-height: 1.05;
+    font-weight: 600;
+  }
+
+  .subtitle {
+    margin-top: 10px;
+    max-width: 920px;
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 14px;
+    padding: 10px 40px;
+    background: rgba(251, 246, 235, 0.95);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .path {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .path strong,
+  .path-part {
+    color: var(--text);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .search,
+  .btn,
+  .era-btn {
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 10px;
+    border-radius: 2px;
+  }
+
+  .search {
+    min-width: 220px;
+    background: var(--panel);
+    color: var(--text);
+    outline: none;
+  }
+
+  .search:focus {
+    border-color: var(--line-strong);
+  }
+
+  .btn,
+  .era-btn {
+    cursor: pointer;
+  }
+
+  .btn:hover,
+  .era-btn:hover,
+  .era-btn.active {
+    color: var(--text);
+    border-color: var(--line-strong);
+    background: rgba(215, 200, 171, 0.28);
+  }
+
+  main {
+    padding: 14px 40px 26px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .section-label {
+    margin-bottom: 10px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .stack-shell,
+  .panel {
+    border: 1px solid var(--line);
+    background:
+      linear-gradient(180deg, rgba(252, 247, 237, 0.98), rgba(246, 238, 223, 0.98));
+  }
+
+  .stack-shell {
+    padding: 10px;
+    overflow-x: auto;
+    background-image:
+      linear-gradient(180deg, rgba(252, 247, 237, 0.98), rgba(246, 238, 223, 0.98)),
+      repeating-linear-gradient(
+        90deg,
+        rgba(80, 50, 16, 0.03) 0,
+        rgba(80, 50, 16, 0.03) 1px,
+        transparent 1px,
+        transparent 64px
+      );
+  }
+
+  .status {
+    border: 1px solid var(--line);
+    border-top: 0;
+    padding: 9px 10px;
+    background: rgba(242, 232, 209, 0.85);
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .status strong {
+    font-weight: 600;
+  }
+
+  .flame {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .row {
+    display: flex;
+    gap: 2px;
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .row-root { min-height: 22px; }
+  .row-top { min-height: 68px; }
+  .row-child { min-height: 38px; }
+  .row-grandchild { min-height: 30px; }
+  .row-greatgrandchild { min-height: 24px; }
+
+  .spacer {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  .frame {
+    position: relative;
+    min-width: 0;
+    padding: 5px 6px 6px;
+    border: 1px solid rgba(110, 60, 16, 0.22);
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 0.08s ease, border-color 0.08s ease, opacity 0.1s ease;
+  }
+
+  .frame:hover {
+    filter: brightness(1.03);
+    border-color: rgba(110, 60, 16, 0.38);
+  }
+
+  .frame.pinned {
+    outline: 1px solid rgba(35, 23, 12, 0.78);
+    outline-offset: -1px;
+  }
+
+  .frame.dim {
+    opacity: 0.22;
+  }
+
+  .frame.hit {
+    border-color: rgba(35, 23, 12, 0.7);
+  }
+
+  .frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 40%, rgba(80,40,10,0.06));
+    pointer-events: none;
+  }
+
+  .root { background: linear-gradient(180deg, var(--root-a), var(--root-b)); }
+  .food { background: linear-gradient(180deg, var(--food-a), var(--food-b)); }
+  .sleep { background: linear-gradient(180deg, var(--sleep-a), var(--sleep-b)); }
+  .care { background: linear-gradient(180deg, var(--care-a), var(--care-b)); }
+  .illness { background: linear-gradient(180deg, var(--illness-a), var(--illness-b)); }
+  .build { background: linear-gradient(180deg, var(--build-a), var(--build-b)); }
+  .social { background: linear-gradient(180deg, var(--social-a), var(--social-b)); }
+  .meaning { background: linear-gradient(180deg, var(--meaning-a), var(--meaning-b)); }
+  .move { background: linear-gradient(180deg, var(--move-a), var(--move-b)); }
+  .coercion { background: linear-gradient(180deg, var(--coercion-a), var(--coercion-b)); }
+  .abstract { background: linear-gradient(180deg, var(--abstract-a), var(--abstract-b)); }
+
+  .frame-name,
+  .frame-meta {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .frame-name {
+    font-size: 11px;
+    line-height: 1.1;
+    font-weight: 600;
+  }
+
+  .row-top .frame-name {
+    font-size: 13px;
+  }
+
+  .frame-meta {
+    margin-top: 2px;
+    font-size: 8px;
+    line-height: 1.1;
+    color: rgba(35, 23, 12, 0.72);
+  }
+
+  .hover-tag {
+    position: fixed;
+    z-index: 20;
+    pointer-events: none;
+    display: none;
+    padding: 4px 6px;
+    border: 1px solid rgba(110, 60, 16, 0.28);
+    background: rgba(251, 246, 235, 0.98);
+    color: var(--text);
+    font-size: 10px;
+    line-height: 1.2;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .panel {
+    padding: 10px;
+  }
+
+  .panel + .panel {
+    margin-top: 12px;
+  }
+
+  .note {
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .era-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .frame-dump {
+    font-size: 10px;
+    line-height: 1.55;
+  }
+
+  .dump-title {
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .dump-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 10px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(110, 60, 16, 0.22);
+  }
+
+  .k { color: var(--muted); }
+  .v { color: var(--text); }
+
+  @media (max-width: 980px) {
+    header,
+    .toolbar,
+    main {
+      padding-left: 18px;
+      padding-right: 18px;
+    }
+
+    main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .flame { min-width: 640px; }
+    .row-top { min-height: 58px; }
+  }
+</style>
+</head>
+<body>
+<a class="home-link" href="/">← sacchen.github.io</a>
+<header>
+  <div class="eyebrow">anthropological systems trace</div>
+  <h1>Flamegraph of Humanity</h1>
+  <div class="subtitle">
+    An inverted flamegraph and anthropological stack trace of rough cumulative human-hours across history. Root, top-level frames, child frames, and deeper subcalls all stay in one graph. Hover to inspect function names, click to pin, press <code>/</code> to find symbols, use <code>left/right</code> to change era, <code>Esc</code> to reset.
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="path" id="path"></div>
+  <div class="controls">
+    <input id="search" class="search" type="text" placeholder="Find symbol... (thresh | laundry | ads)" />
+    <button id="resetBtn" class="btn" type="button">Reset</button>
+  </div>
+</div>
+
+<main>
+  <section>
+    <div class="section-label">Flamegraph</div>
+    <div class="stack-shell">
+      <div class="flame" id="overviewGraph"></div>
+    </div>
+    <div class="status" id="statusLine">Function: hover a frame to inspect | click to pin | / to find | left/right to change era</div>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <div class="section-label" style="margin-bottom:8px;">Era Lens</div>
+      <div class="era-bar" id="eraBar"></div>
+      <div class="note" id="eraNote"></div>
+    </div>
+
+    <div class="panel">
+      <div class="section-label" style="margin-bottom:8px;">Inspector</div>
+      <div class="frame-dump" id="inspector">
+        <div class="note">Hover a frame to sample. Click to pin the current sample.</div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="hover-tag" id="hoverTag"></div>
+
+<script>
+const TOP_LEVEL = [
+  { id:'sleep', label:'sleep()', pct:29, tone:'sleep', desc:'The single biggest uninterrupted block in human life.', note:'Recovery is universal, even when compressed.' },
+  { id:'food', label:'get_food()', pct:21, tone:'food', desc:'A persistent call across all eras: calories first, then everything else.', note:'Modern wages often wrap the same old problem.' },
+  { id:'care', label:'raise_children()', pct:11, tone:'care', desc:'Long human childhood means long human maintenance.', note:'Feeding, carrying, soothing, teaching.' },
+  { id:'illness', label:'endure_illness_and_pain()', pct:8, tone:'illness', desc:'Sickness, injury, chronic pain, and caring for the sick consumed a huge share of human time.', note:'This was background process for most of history, not an edge case.' },
+  { id:'build', label:'maintain_life_support()', pct:10, tone:'build', desc:'Shelter, fuel, clothing, repairs, hauling, cleaning.', note:'Invisible work that keeps the system running.' },
+  { id:'social', label:'coordinate_with_people()', pct:8, tone:'social', desc:'Conversation, reputation, reciprocity, and coordination.', note:'Group life has overhead.' },
+  { id:'meaning', label:'ritual_play_story()', pct:5, tone:'meaning', desc:'Story, play, ceremony, and shared symbolic life.', note:'Leisure and meaning keep reappearing.' },
+  { id:'move', label:'migrate_and_travel()', pct:3, tone:'move', desc:'Walking, relocation, pilgrimage, commuting, border waiting, and rebuilding somewhere else.', note:'Movement is not just transit; often it is the event.' },
+  { id:'coercion', label:'coerced_labor_and_force()', pct:4, tone:'coercion', desc:'War, punishment, slavery, policing, conscription, and life under imposed schedules.', note:'For many people, the stack was not theirs.' },
+  { id:'abstract', label:'records_rules_and_screens()', pct:1, tone:'abstract', desc:'Records, schools, forms, dashboards, and mediated overhead.', note:'Historically thin, recently thick.' }
+];
+
+const ERAS = {
+  hg: {
+    name: 'Hunter-Gatherer',
+    note: 'For most of human time, food and maintenance were direct. The stack stays close to bodies, weather, and ecology.',
+    breakdowns: {
+      sleep: { text:'Communal and less scheduled. Nights are broken by weather, noise, fire, and social rhythm rather than clocks.', blocks:[
+        { label:'night_sleep()', pct:78, desc:'Main sleep block, socially embedded and less rigid than modern sleep.' },
+        { label:'wake_for_fire()', pct:9, desc:'Arousal for cold, sound, animals, or checking the camp.' },
+        { label:'nap()', pct:13, desc:'Short daytime rest belongs to the rhythm rather than counting as failure.' }
+      ]},
+      food: { text:'Food means direct contact with landscape: searching, waiting, carrying, then eating soon after.', blocks:[
+        { label:'forage()', pct:46, desc:'Reliable daily gathering of roots, fruit, tubers, nuts, and small foods.' },
+        { label:'hunt()', pct:24, desc:'Higher-risk pursuit with long dead time and sudden intensity.' },
+        { label:'process_food()', pct:16, desc:'Cutting, roasting, cracking, cleaning, and sharing.' },
+        { label:'carry_water_fuel()', pct:14, desc:'Calories include moving the inputs that make calories usable.' }
+      ]},
+      care: { text:'Childcare is distributed and embedded into work. Infants stay on bodies; older children learn by trailing adults.', blocks:[
+        { label:'carry_infant()', pct:35, desc:'Babies stay physically attached to adults for long stretches.' },
+        { label:'feed_soothe()', pct:28, desc:'Frequent feeding and calming woven through everything else.' },
+        { label:'watch_and_teach()', pct:22, desc:'Children absorb skills by shadowing real tasks.' },
+        { label:'alloparent()', pct:15, desc:'Siblings, elders, and kin absorb part of the load.' }
+      ]},
+      illness: { text:'Illness is not a separate institution yet. Fever, wounds, parasites, and pain sit inside ordinary camp life.', blocks:[
+        { label:'treat_wounds()', pct:26, desc:'Cuts, bites, sprains, and infection risks require direct attention.' },
+        { label:'rest_and_endure()', pct:31, desc:'A lot of sickness is waiting, weakness, and surviving it.' },
+        { label:'care_for_sick_kin()', pct:24, desc:'Someone else loses time while another person cannot function.' },
+        { label:'manage_chronic_pain()', pct:19, desc:'Aching teeth, backs, joints, and untreated problems keep running.' }
+      ]},
+      build: { text:'Lighter infrastructure, but constant repair: fire, tools, carrying, shelter setup.', blocks:[
+        { label:'maintain_fire()', pct:24, desc:'Heat, protection, and cooking all depend on this staying alive.' },
+        { label:'make_repair_tools()', pct:28, desc:'Edges dull, bindings fail, containers wear out.' },
+        { label:'assemble_shelter()', pct:18, desc:'Camp structures are lighter but never free.' },
+        { label:'haul_materials()', pct:30, desc:'Life runs on carrying.' }
+      ]},
+      social: { text:'Conversation is logistics, alliance repair, entertainment, and memory storage all at once.', blocks:[
+        { label:'gossip()', pct:33, desc:'Status tracking and group safety.' },
+        { label:'share_food()', pct:22, desc:'Reciprocity makes variance survivable.' },
+        { label:'settle_conflict()', pct:17, desc:'Small-group life needs frequent repair.' },
+        { label:'plan_movement()', pct:28, desc:'Who goes where next is a collective decision.' }
+      ]},
+      meaning: { text:'The fire circle carries myth, music, jokes, and cosmology in one frame.', blocks:[
+        { label:'storytelling()', pct:34, desc:'Memory, teaching, and entertainment overlap.' },
+        { label:'song_dance()', pct:22, desc:'Shared rhythm and ceremony.' },
+        { label:'play()', pct:28, desc:'Children and adults both spend real time here.' },
+        { label:'ritual()', pct:16, desc:'Meaning is embedded rather than scheduled separately.' }
+      ]},
+      move: { text:'Most movement is on foot. Seasonal relocation, carrying, following game, and occasional flight all cost real time.', blocks:[
+        { label:'seasonal_move()', pct:36, desc:'Camp relocation means packing, walking, and rebuilding.' },
+        { label:'daily_walking()', pct:42, desc:'Ordinary life already contains long distances.' },
+        { label:'flee_or_relocate()', pct:22, desc:'Danger and scarcity can force movement fast.' }
+      ]},
+      coercion: { text:'No giant states yet, but violence, raids, capture, and submission still break the normal stack.', blocks:[
+        { label:'raid_or_defend()', pct:33, desc:'Small-scale but high-stakes bursts.' },
+        { label:'avoid_threat()', pct:27, desc:'Route choices and vigilance are shaped by danger.' },
+        { label:'submission_or_capture()', pct:18, desc:'Some lives are redirected by force.' },
+        { label:'punish_norm_breaks()', pct:22, desc:'Social enforcement happens close to the group.' }
+      ]},
+      abstract: { text:'Very thin. Coordination stays direct rather than mediated by records or institutions.', blocks:[
+        { label:'oral_memory()', pct:76, desc:'Knowledge is carried in people, not files.' },
+        { label:'count_exchange()', pct:24, desc:'Some tracking exists, but not as a thick layer.' }
+      ]}
+    }
+  },
+  agrarian: {
+    name: 'Agrarian',
+    note: 'Agriculture expands output and expands grind. Repetition gets deeper, especially around grain and household production.',
+    breakdowns: {
+      sleep: { text:'Sleep follows darkness, but labor, animals, children, and harvest stress keep interrupting it.', blocks:[
+        { label:'night_sleep()', pct:82, desc:'Main block, often shared, practical, and crowded.' },
+        { label:'wake_for_animals()', pct:8, desc:'Livestock and household duties interrupt rest.' },
+        { label:'collapse_after_harvest()', pct:10, desc:'Exhaustion creates harder crashes when work spikes.' }
+      ]},
+      food: { text:'Food becomes repetitive field labor. Harvest is only the middle of the stack: grain still has to be separated, ground, baked, stored, and guarded.', blocks:[
+        { label:'plant_and_weed()', pct:27, desc:'The slow, repetitive maintenance of fields.' },
+        { label:'harvest()', pct:18, desc:'Fast seasonal labor where delay means loss.' },
+        { label:'thresh_and_winnow()', pct:24, desc:'Beating grain loose, separating chaff, and repeating by hand across huge volumes.' },
+        { label:'grind_and_bake()', pct:17, desc:'Edible calories still require milling, kneading, fire, and time.' },
+        { label:'store_and_guard()', pct:14, desc:'Stored food can rot, be stolen, or be taxed.' }
+      ]},
+      care: { text:'Children enter productive work earlier, but households are productive units, so the total burden stays high.', blocks:[
+        { label:'infant_care()', pct:31, desc:'Still nonstop and physically demanding.' },
+        { label:'train_for_work()', pct:27, desc:'Children are taught chores, fields, animals, and household roles.' },
+        { label:'supervise_many()', pct:24, desc:'Larger families spread and multiply the work.' },
+        { label:'manage_loss()', pct:18, desc:'High mortality keeps risk close to parenting.' }
+      ]},
+      illness: { text:'This is one of the thickest hidden layers in agrarian life: infections, parasites, childbirth injury, fever, and caretaking.', blocks:[
+        { label:'survive_fever()', pct:24, desc:'Bedrest, weakness, and uncertainty consume days.' },
+        { label:'nurse_family()', pct:29, desc:'Households spend real labor on sick bodies.' },
+        { label:'endure_tooth_back_joint_pain()', pct:27, desc:'Physical suffering is continuous, not occasional.' },
+        { label:'childbirth_recovery()', pct:20, desc:'Pregnancy and recovery repeatedly re-enter the stack.' }
+      ]},
+      build: { text:'A mountain of hidden domestic labor: hauling, fuel, textile work, repairs, and preserving supplies.', blocks:[
+        { label:'haul_water_fuel()', pct:23, desc:'Every fire and meal starts with carrying.' },
+        { label:'textile_work()', pct:29, desc:'Spinning, weaving, mending, patching, repeating.' },
+        { label:'repair_house_tools()', pct:21, desc:'Roofs leak, tools break, fences fail.' },
+        { label:'clean_and_preserve()', pct:27, desc:'Spoilage and dirt are constant enemies.' }
+      ]},
+      social: { text:'Village life is dense and watchful. Reputation, obligation, and custom shape nearly every decision.', blocks:[
+        { label:'village_gossip()', pct:29, desc:'Informal enforcement and reputation tracking.' },
+        { label:'market_exchange()', pct:21, desc:'Trade, barter, and practical coordination.' },
+        { label:'kin_obligations()', pct:28, desc:'Marriage, inheritance, labor, and duty bind households together.' },
+        { label:'petition_authority()', pct:22, desc:'Lords, tax collectors, and priests enter the stack.' }
+      ]},
+      meaning: { text:'Meaning follows the calendar: feast days, harvest rites, taverns, stories, and public religion.', blocks:[
+        { label:'religious_ritual()', pct:48, desc:'Prayer, feast days, and sacred obligation organize the year.' },
+        { label:'festival()', pct:17, desc:'Rare intense breaks from routine.' },
+        { label:'story_song()', pct:20, desc:'Entertainment and memory carried orally.' },
+        { label:'games()', pct:15, desc:'Play survives, but tiredness narrows it.' }
+      ]},
+      move: { text:'People walk constantly, and many are forced to move by hunger, marriage, war, lordship, or land pressure.', blocks:[
+        { label:'daily_foot_travel()', pct:39, desc:'Ordinary subsistence already means long distances.' },
+        { label:'haul_to_market()', pct:21, desc:'Trade requires carrying goods over land.' },
+        { label:'seasonal_or_forced_move()', pct:24, desc:'Displacement, marriage, labor, and scarcity shift households.' },
+        { label:'pilgrimage_or_service()', pct:16, desc:'Sacred and political obligations can take people away for long stretches.' }
+      ]},
+      coercion: { text:'Larger organized powers make coercion systematic: levies, corvee labor, serfdom, slavery, punishment, and public force.', blocks:[
+        { label:'military_levy()', pct:22, desc:'Men are pulled from ordinary life into campaigns.' },
+        { label:'corvee_or_lord_labor()', pct:28, desc:'Time is extracted directly by landlords and states.' },
+        { label:'slavery_or_serfdom()', pct:33, desc:'For many people, labor is owned or heavily constrained.' },
+        { label:'tax_and_punish()', pct:17, desc:'Coercion expands through state and landlord systems.' }
+      ]},
+      abstract: { text:'Still secondary, but records, tithes, and formal institutions begin thickening the layer.', blocks:[
+        { label:'keep_accounts()', pct:42, desc:'Land, rent, and stores start needing records.' },
+        { label:'religious_bureaucracy()', pct:31, desc:'Sacred institutions become administrative ones too.' },
+        { label:'legal_petitions()', pct:27, desc:'A first taste of paperwork as lived time.' }
+      ]}
+    }
+  },
+  industrial: {
+    name: 'Industrial',
+    note: 'The clock takes over. Direct subsistence gets abstracted into wages, but maintenance does not disappear.',
+    breakdowns: {
+      sleep: { text:'Artificial light and shifts squeeze sleep into a more rigid, often shorter block.', blocks:[
+        { label:'night_sleep()', pct:87, desc:'More consolidated than earlier eras.' },
+        { label:'alarm_shock()', pct:7, desc:'Clock-based waking becomes normal.' },
+        { label:'recovery_rest()', pct:6, desc:'Exhaustion still leaks into off-hours.' }
+      ]},
+      food: { text:'Food is no longer directly hunted or grown for many people. It is wrapped in wage labor, transport, and purchase.', blocks:[
+        { label:'work_for_wages()', pct:38, desc:'The new outer wrapper around calories.' },
+        { label:'shop()', pct:16, desc:'Food acquisition becomes market navigation.' },
+        { label:'cook()', pct:21, desc:'Preparation remains a major time sink.' },
+        { label:'commute_supply_chain()', pct:11, desc:'Transport becomes part of getting fed.' },
+        { label:'eat()', pct:14, desc:'The visible endpoint hides the longer stack beneath it.' }
+      ]},
+      care: { text:'The nuclear family isolates care work. School absorbs children for hours, but creates new logistics.', blocks:[
+        { label:'infant_and_home_care()', pct:34, desc:'Still direct, physical, repetitive work.' },
+        { label:'school_routine()', pct:24, desc:'Getting children into institutions becomes part of care.' },
+        { label:'discipline_and_homework()', pct:19, desc:'The school stack leaks into the household.' },
+        { label:'earn_for_dependents()', pct:23, desc:'Supporting children financially becomes a larger explicit burden.' }
+      ]},
+      illness: { text:'Disease burden falls in some places, but factory injury, chronic pain, epidemics, and caregiving still take huge cumulative time.', blocks:[
+        { label:'recover_from_injury()', pct:24, desc:'Industrial bodies break in new ways and still need downtime.' },
+        { label:'home_nursing()', pct:28, desc:'Families still absorb much of the care burden.' },
+        { label:'manage_chronic_ache()', pct:26, desc:'Backs, lungs, teeth, and joints stay in the stack.' },
+        { label:'hospital_and_wait()', pct:22, desc:'Care starts moving into institutions and queues.' }
+      ]},
+      build: { text:'Some tasks are mechanized, but domestic labor remains large: cleaning, laundry, shopping, repairs, heating, and bills.', blocks:[
+        { label:'clean()', pct:24, desc:'A recurring baseline task in denser housing.' },
+        { label:'laundry()', pct:19, desc:'Mechanized later, but still regular.' },
+        { label:'repair_and_heat()', pct:23, desc:'Keeping buildings functional costs ongoing time.' },
+        { label:'household_admin()', pct:16, desc:'Bills, forms, and errands start expanding.' },
+        { label:'shop_for_supplies()', pct:18, desc:'Basic inputs now require market trips.' }
+      ]},
+      social: { text:'Human coordination moves into work teams, unions, churches, schools, and denser institutions.', blocks:[
+        { label:'workplace_coordination()', pct:27, desc:'Factories and offices intensify scheduled cooperation.' },
+        { label:'family_talk()', pct:22, desc:'Household planning still anchors daily life.' },
+        { label:'civic_membership()', pct:18, desc:'Clubs, unions, congregations, associations.' },
+        { label:'neighborhood_exchange()', pct:17, desc:'Mutual practical aid and casual local ties.' },
+        { label:'mass_media_chat()', pct:16, desc:'Shared public narratives become more standardized.' }
+      ]},
+      meaning: { text:'Some older ritual remains, but leisure becomes mediated by mass entertainment and scheduled free time.', blocks:[
+        { label:'religion()', pct:28, desc:'Still significant, though declining in some regions.' },
+        { label:'sport_and_spectacle()', pct:21, desc:'Shared leisure becomes organized and commercial.' },
+        { label:'radio_tv()', pct:31, desc:'Attention starts pooling around broadcast media.' },
+        { label:'games_and_holidays()', pct:20, desc:'Play survives in compressed windows.' }
+      ]},
+      move: { text:'Walking gives way to trains, roads, migration corridors, military transport, and the daily commute.', blocks:[
+        { label:'commute()', pct:33, desc:'Daily transit becomes a normalized tax.' },
+        { label:'labor_migration()', pct:24, desc:'People move for factories, land, empire, and survival.' },
+        { label:'military_or_state_transport()', pct:18, desc:'States move bodies at scale.' },
+        { label:'queue_and_transfer()', pct:25, desc:'Industrial travel adds timetables, stations, and waiting.' }
+      ]},
+      coercion: { text:'Industrial states scale force up dramatically. War, prison, police, colonial labor systems, and camps can absorb years.', blocks:[
+        { label:'mass_war()', pct:28, desc:'Industrial production magnifies military reach.' },
+        { label:'conscription_training()', pct:17, desc:'Large systems can requisition bodies.' },
+        { label:'policing_prison()', pct:27, desc:'Punishment becomes institutional and prolonged.' },
+        { label:'colonial_or_forced_labor()', pct:18, desc:'Coercive labor systems remain economically central.' },
+        { label:'civilian_disruption()', pct:10, desc:'Even non-combatants lose time to fallout.' }
+      ]},
+      abstract: { text:'This layer thickens fast: schools, clocks, forms, offices, waiting rooms, and official procedures.', blocks:[
+        { label:'school()', pct:29, desc:'A huge block of structured childhood time.' },
+        { label:'paperwork()', pct:23, desc:'Forms and records enter ordinary life.' },
+        { label:'meetings_and_management()', pct:19, desc:'Coordination shifts into formal administration.' },
+        { label:'queue_and_wait()', pct:15, desc:'Bureaucratic waiting becomes normal.' },
+        { label:'clerical_work()', pct:14, desc:'Symbol handling becomes a job category.' }
+      ]}
+    }
+  },
+  digital: {
+    name: 'Digital',
+    note: 'Maintenance does not vanish. It gets routed through interfaces, notifications, subscriptions, and thicker abstractions.',
+    breakdowns: {
+      sleep: { text:'Sleep stays huge, but screens push against it before and after the main block.', blocks:[
+        { label:'night_sleep()', pct:84, desc:'Still the anchor of recovery.' },
+        { label:'scroll_in_bed()', pct:9, desc:'A new pre-sleep wrapper around rest.' },
+        { label:'recover_from_debt()', pct:7, desc:'Fatigue spills into the day more often.' }
+      ]},
+      food: { text:'The stack gets deeper: symbolic labor, payment, apps, stores, logistics, then consumption.', blocks:[
+        { label:'work_for_money()', pct:36, desc:'Still the dominant wrapper for calories.' },
+        { label:'platform_shop()', pct:15, desc:'Apps and stores compress browsing and purchase.' },
+        { label:'prepare_or_reheat()', pct:18, desc:'Cooking shrinks for some, not for everyone.' },
+        { label:'delivery_logistics()', pct:17, desc:'Someone else\'s labor becomes part of your food stack.' },
+        { label:'eat()', pct:14, desc:'The visible end stays short compared with the chain.' }
+      ]},
+      care: { text:'Fewer children often means more intensive oversight per child. Scheduling and monitoring become hidden tasks.', blocks:[
+        { label:'direct_care()', pct:29, desc:'Feeding, transport, cleaning, emotional regulation.' },
+        { label:'schedule_and_drive()', pct:24, desc:'Modern childhood is calendar-heavy.' },
+        { label:'school_platforms()', pct:18, desc:'Institutional care now comes with apps and portals.' },
+        { label:'pay_for_childhood()', pct:29, desc:'Costs are explicit, recurring, and large.' }
+      ]},
+      illness: { text:'Medicine is better, but chronic pain, mental strain, appointments, and care administration still eat time.', blocks:[
+        { label:'manage_chronic_condition()', pct:27, desc:'Medication, symptoms, and recurring limits stay active.' },
+        { label:'appointments_and_waiting()', pct:24, desc:'Healthcare now adds portals, scheduling, and waiting rooms.' },
+        { label:'care_for_family_member()', pct:26, desc:'Someone else still absorbs the hidden labor.' },
+        { label:'fatigue_and_mental_load()', pct:23, desc:'Low energy and stress become a constant drag on the stack.' }
+      ]},
+      build: { text:'The core chores still exist, but now they are wrapped in subscriptions, deliveries, account logins, and constant small admin.', blocks:[
+        { label:'clean_and_laundry()', pct:27, desc:'Still physically real, still recurring.' },
+        { label:'shop_and_restock()', pct:18, desc:'Basic household inputs remain a loop.' },
+        { label:'repair_and_replace()', pct:16, desc:'Broken things are more disposable, but still demand attention.' },
+        { label:'household_admin()', pct:24, desc:'Bills, accounts, renewals, scheduling, support chats.' },
+        { label:'manage_devices()', pct:15, desc:'A new maintenance layer on top of the old one.' }
+      ]},
+      social: { text:'Human coordination still matters, but much of it now runs through feeds, chats, and work platforms.', blocks:[
+        { label:'message_threads()', pct:26, desc:'Low-friction, high-volume coordination.' },
+        { label:'meetings()', pct:22, desc:'Formal coordination expands, especially in knowledge work.' },
+        { label:'family_logistics()', pct:21, desc:'Group scheduling becomes a real task.' },
+        { label:'social_feed_check()', pct:17, desc:'Ambient awareness of others through platforms.' },
+        { label:'in_person_time()', pct:14, desc:'Still the real thing, often squeezed.' }
+      ]},
+      meaning: { text:'Meaning competes with entertainment at industrial scale. Stories are everywhere, often delivered by platforms built to keep you there.', blocks:[
+        { label:'streaming()', pct:31, desc:'Passive story intake becomes dominant.' },
+        { label:'games()', pct:22, desc:'Play is still real, now often screen-mediated.' },
+        { label:'self_help_and_wellness()', pct:17, desc:'Meaning becomes a consumer lane.' },
+        { label:'ritual()', pct:12, desc:'Still persists, but less monopolizing.' },
+        { label:'memes_and_jokes()', pct:18, desc:'Compressed social storytelling.' }
+      ]},
+      move: { text:'Cars, flights, commuting, migration paperwork, border control, and relocation all sit in the same movement layer.', blocks:[
+        { label:'commute()', pct:34, desc:'Daily transport remains a baseline tax.' },
+        { label:'move_homes_or_cities()', pct:18, desc:'Modern life still forces periodic uprooting.' },
+        { label:'migration_and_border_wait()', pct:24, desc:'Movement under policy and scarcity can consume whole lives.' },
+        { label:'errands_and_pickups()', pct:24, desc:'A lot of movement is fragmented short-haul maintenance.' }
+      ]},
+      coercion: { text:'The scale remains large, but many people now encounter force through unequal exposure to war, policing, detention, and precarious labor.', blocks:[
+        { label:'state_violence()', pct:22, desc:'War and force remain active, even when distant to some viewers.' },
+        { label:'policing_and_prison()', pct:29, desc:'Institutional punishment stays thick.' },
+        { label:'debt_and_precarious_labor()', pct:24, desc:'Economic compulsion can dominate time without looking like chains.' },
+        { label:'news_fear_loop()', pct:10, desc:'Conflict now also consumes time as attention.' },
+        { label:'displacement_recovery()', pct:15, desc:'People still lose years rebuilding after rupture.' }
+      ]},
+      abstract: { text:'The historically thin top layer starts feeling enormous: dashboards, school portals, meetings, forms, and things like optimizing ads.', blocks:[
+        { label:'email_and_chat()', pct:24, desc:'Constant symbolic coordination.' },
+        { label:'meetings()', pct:21, desc:'Work increasingly manages itself through talk about work.' },
+        { label:'school_and_forms()', pct:15, desc:'Administrative overhead starts early.' },
+        { label:'dashboard_work()', pct:22, desc:'Metrics, reports, and interface-driven labor.' },
+        { label:'optimize_google_ads()', pct:18, desc:'Abstract labor far removed from direct survival.' }
+      ]}
+    }
+  }
+};
+
+const ERA_ORDER = ['hg', 'agrarian', 'industrial', 'digital'];
+
+let currentEra = 'agrarian';
+let selectedTopLevelId = 'food';
+let pinned = null;
+let selectedChildLabel = null;
+
+const overviewGraph = document.getElementById('overviewGraph');
+const statusLine = document.getElementById('statusLine');
+const inspector = document.getElementById('inspector');
+const eraBar = document.getElementById('eraBar');
+const eraNote = document.getElementById('eraNote');
+const pathEl = document.getElementById('path');
+const searchInput = document.getElementById('search');
+const resetBtn = document.getElementById('resetBtn');
+const hoverTag = document.getElementById('hoverTag');
+
+function getTopLevel(id) {
+  return TOP_LEVEL.find(item => item.id === id);
+}
+
+function getBreakdown(eraId, topId) {
+  return ERAS[eraId].breakdowns[topId];
+}
+
+function getSelectedChild(topId) {
+  if (!selectedChildLabel) return null;
+  return getBreakdown(currentEra, topId).blocks.find(item => item.label === selectedChildLabel) || null;
+}
+
+function scaledPct(topPct, childPct, grandPct) {
+  return (topPct * childPct * grandPct) / 10000;
+}
+
+function scaledPct4(topPct, childPct, grandPct, greatPct) {
+  return (topPct * childPct * grandPct * greatPct) / 1000000;
+}
+
+function getNestedBlocks(topId, childLabel) {
+  const explicit = {
+    forage: [
+      { label:'scan_landscape()', pct:34, desc:'Search, classify, and remember where edible plants are.' },
+      { label:'collect_and_sort()', pct:38, desc:'Gather usable material and reject bad material.' },
+      { label:'carry_back()', pct:28, desc:'Bring calories back to camp.' }
+    ],
+    hunt: [
+      { label:'track_sign()', pct:30, desc:'Read movement from spoor, prints, and broken cover.' },
+      { label:'stalk_or_pursue()', pct:46, desc:'Long pursuit with bursts of intensity.' },
+      { label:'recover_carcass()', pct:24, desc:'Butcher, transport, and secure the kill.' }
+    ],
+    process_food: [
+      { label:'clean()', pct:28, desc:'Remove dirt, hide, shell, or unwanted parts.' },
+      { label:'cook_or_roast()', pct:42, desc:'Turn raw calories into safer edible calories.' },
+      { label:'share()', pct:30, desc:'Distribution is part of the food stack.' }
+    ],
+    carry_water_fuel: [
+      { label:'walk_out()', pct:31, desc:'Time spent reaching the source.' },
+      { label:'load_weight()', pct:24, desc:'Fill or bundle the material.' },
+      { label:'carry_back()', pct:45, desc:'The return leg is the costly one.' }
+    ],
+    plant_and_weed: [
+      { label:'prepare_soil()', pct:28, desc:'Clear, break, or shape the field.' },
+      { label:'plant_seed()', pct:22, desc:'Put the crop in the ground.' },
+      { label:'weed_and_tend()', pct:50, desc:'Repetitive care dominates this phase.' }
+    ],
+    harvest: [
+      { label:'cut_crop()', pct:39, desc:'Bring plants down quickly before weather or rot.' },
+      { label:'bind_and_stack()', pct:27, desc:'Bundle and stage material for the next step.' },
+      { label:'haul_to_yard()', pct:34, desc:'Move harvest toward processing.' }
+    ],
+    thresh_and_winnow: [
+      { label:'beat_sheaves()', pct:41, desc:'Knock grain loose from stalks.' },
+      { label:'toss_chaff()', pct:24, desc:'Use air and repetition to separate edible grain.' },
+      { label:'bag_clean_grain()', pct:35, desc:'Collect and secure the usable output.' }
+    ],
+    grind_and_bake: [
+      { label:'grind_meal()', pct:44, desc:'Turn grain into flour or meal by repeated force.' },
+      { label:'mix_and_knead()', pct:23, desc:'Prepare dough or mash.' },
+      { label:'fire_and_bake()', pct:33, desc:'Fuel and oven time finish the stack.' }
+    ],
+    store_and_guard: [
+      { label:'dry_and_pack()', pct:28, desc:'Stabilize the harvest for storage.' },
+      { label:'protect_from_pests()', pct:31, desc:'Spoilage pressure is constant.' },
+      { label:'watch_against_theft()', pct:41, desc:'Stored food attracts claims and risk.' }
+    ],
+    work_for_wages: [
+      { label:'clock_in()', pct:18, desc:'Enter the scheduled work system.' },
+      { label:'perform_shift()', pct:59, desc:'Core paid labor block.' },
+      { label:'collect_pay()', pct:23, desc:'Convert labor into money.' }
+    ],
+    work_for_money: [
+      { label:'open_work_loop()', pct:17, desc:'Start the platform or workday routine.' },
+      { label:'perform_paid_tasks()', pct:61, desc:'Core monetized labor block.' },
+      { label:'convert_to_budget()', pct:22, desc:'Translate earnings into food purchasing power.' }
+    ],
+    shop: [
+      { label:'travel_or_queue()', pct:27, desc:'Reaching the market still costs time.' },
+      { label:'compare_and_select()', pct:36, desc:'Scan choices and prices.' },
+      { label:'pay_and_carry()', pct:37, desc:'Close the loop and bring it home.' }
+    ],
+    platform_shop: [
+      { label:'browse()', pct:25, desc:'Scroll through options and substitutions.' },
+      { label:'checkout()', pct:24, desc:'Address, payment, and confirmation.' },
+      { label:'wait_for_fulfillment()', pct:51, desc:'The app hides someone else\'s work behind delay.' }
+    ],
+    cook: [
+      { label:'prep_ingredients()', pct:31, desc:'Wash, cut, portion, and stage.' },
+      { label:'heat_and_watch()', pct:42, desc:'Active cooking plus attention.' },
+      { label:'serve_and_clean()', pct:27, desc:'Cooking ends with distribution and cleanup.' }
+    ],
+    prepare_or_reheat: [
+      { label:'unwrap_or_portion()', pct:28, desc:'Turn packaged food into a usable meal.' },
+      { label:'heat()', pct:39, desc:'Microwave, stove, or oven time.' },
+      { label:'serve_and_clear()', pct:33, desc:'Eating still generates cleanup.' }
+    ],
+    commute_supply_chain: [
+      { label:'travel()', pct:52, desc:'Move to and from the place food is acquired.' },
+      { label:'wait()', pct:18, desc:'Transit, queues, and delays.' },
+      { label:'return_with_goods()', pct:30, desc:'The last leg still carries the load.' }
+    ],
+    delivery_logistics: [
+      { label:'place_order()', pct:19, desc:'Translate hunger into an app request.' },
+      { label:'pick_pack_route()', pct:41, desc:'Warehouse and courier work sit inside the delay.' },
+      { label:'handoff()', pct:40, desc:'Delivery closes the loop.' }
+    ],
+    eat: [
+      { label:'portion()', pct:18, desc:'Prepare the meal for actual consumption.' },
+      { label:'consume()', pct:56, desc:'The visible endpoint of a long stack.' },
+      { label:'clear_up()', pct:26, desc:'The meal leaves dishes and leftovers.' }
+    ],
+    carry_infant: [
+      { label:'lift_and_hold()', pct:33, desc:'Physical support is constant.' },
+      { label:'move_while_carrying()', pct:39, desc:'Other work continues while carrying.' },
+      { label:'settle_and_shift()', pct:28, desc:'Position changes, soothing, and restlessness.' }
+    ],
+    feed_soothe: [
+      { label:'prepare_feed()', pct:24, desc:'Get milk, food, or comfort ready.' },
+      { label:'feed()', pct:42, desc:'The direct care act itself.' },
+      { label:'calm_and_reset()', pct:34, desc:'The task often continues after feeding.' }
+    ],
+    treat_wounds: [
+      { label:'clean_injury()', pct:34, desc:'Remove dirt, blood, or contamination.' },
+      { label:'apply_pressure_or_wrap()', pct:38, desc:'Stabilize the damaged body part.' },
+      { label:'watch_for_infection()', pct:28, desc:'Healing is uncertain and needs rechecking.' }
+    ],
+    rest_and_endure: [
+      { label:'lie_still()', pct:39, desc:'Activity drops because the body cannot do much else.' },
+      { label:'wait_for_relief()', pct:33, desc:'A large share is just enduring time passing.' },
+      { label:'resume_slowly()', pct:28, desc:'Recovery is partial and gradual.' }
+    ],
+    care_for_sick_kin: [
+      { label:'bring_water_or_food()', pct:31, desc:'Sick people still need inputs.' },
+      { label:'sit_and_watch()', pct:37, desc:'Attendance itself consumes time.' },
+      { label:'clean_after_sickness()', pct:32, desc:'Illness creates extra mess and hazard.' }
+    ],
+    manage_chronic_pain: [
+      { label:'keep_working_while_hurting()', pct:47, desc:'Pain often runs under ordinary labor.' },
+      { label:'pause_and_recover()', pct:26, desc:'Short breaks are partial relief, not a fix.' },
+      { label:'adjust_movement()', pct:27, desc:'Everything takes longer when the body has limits.' }
+    ],
+    watch_and_teach: [
+      { label:'keep_near()', pct:36, desc:'Supervision starts with proximity.' },
+      { label:'demonstrate_task()', pct:29, desc:'Show how the work is done.' },
+      { label:'correct_and_repeat()', pct:35, desc:'Learning comes through repetition.' }
+    ],
+    infant_care: [
+      { label:'feed()', pct:34, desc:'Feeding sets the rhythm.' },
+      { label:'clean_change()', pct:29, desc:'Bodies need constant maintenance.' },
+      { label:'soothe_to_sleep()', pct:37, desc:'Rest requires active work.' }
+    ],
+    survive_fever: [
+      { label:'sweat_and_rest()', pct:42, desc:'The body is forced into low-output recovery.' },
+      { label:'cool_or_warm_body()', pct:24, desc:'Simple comfort measures become the treatment.' },
+      { label:'wait_for_turn()', pct:34, desc:'Many fevers are survived or not survived over time.' }
+    ],
+    nurse_family: [
+      { label:'bring_broth_or_water()', pct:28, desc:'Direct support for basic needs.' },
+      { label:'change_linens()', pct:26, desc:'Illness creates cleanup work.' },
+      { label:'sit_through_the_night()', pct:46, desc:'Caregivers lose sleep too.' }
+    ],
+    endure_tooth_back_joint_pain: [
+      { label:'work_while_in_pain()', pct:54, desc:'Pain is folded into ordinary labor.' },
+      { label:'stop_and_breathe()', pct:21, desc:'Brief pauses are the available relief.' },
+      { label:'sleep_poorly()', pct:25, desc:'Pain leaks into recovery time.' }
+    ],
+    childbirth_recovery: [
+      { label:'labor_and_birth()', pct:32, desc:'The acute event itself.' },
+      { label:'bleed_rest_heal()', pct:41, desc:'Recovery is physically expensive and risky.' },
+      { label:'resume_work_early()', pct:27, desc:'Many people re-enter labor before they are ready.' }
+    ],
+    direct_care: [
+      { label:'feed_and_clean()', pct:34, desc:'Basic bodily care remains central.' },
+      { label:'transport()', pct:28, desc:'Modern care includes a lot of moving children around.' },
+      { label:'regulate_emotions()', pct:38, desc:'Calming and coordination are their own work.' }
+    ],
+    schedule_and_drive: [
+      { label:'manage_calendar()', pct:28, desc:'Track appointments and obligations.' },
+      { label:'drive_and_wait()', pct:46, desc:'Transport and idle time dominate.' },
+      { label:'handoff_and_return()', pct:26, desc:'Dropoff and pickup close the loop.' }
+    ],
+    school_platforms: [
+      { label:'check_portal()', pct:29, desc:'Read assignments, notices, and updates.' },
+      { label:'submit_or_reply()', pct:31, desc:'Upload, sign, acknowledge, respond.' },
+      { label:'follow_up_offline()', pct:40, desc:'The app creates real-world tasks.' }
+    ],
+    recover_from_injury: [
+      { label:'stop_work()', pct:24, desc:'Injury pulls labor time offline.' },
+      { label:'bandage_or_splint()', pct:29, desc:'Immediate practical treatment.' },
+      { label:'heal_slowly()', pct:47, desc:'The long tail is the real cost.' }
+    ],
+    home_nursing: [
+      { label:'prepare_remedies()', pct:26, desc:'Boil water, medicine, poultices, comfort.' },
+      { label:'monitor_sickbed()', pct:41, desc:'Attendance itself is a labor block.' },
+      { label:'launder_and_clean()', pct:33, desc:'Care for the sick creates secondary work.' }
+    ],
+    manage_chronic_ache: [
+      { label:'push_through_shift()', pct:48, desc:'Pain is normalized inside work.' },
+      { label:'rest_after_work()', pct:24, desc:'Recovery shifts into off-hours.' },
+      { label:'limit_movement()', pct:28, desc:'Chronic pain constrains everything else.' }
+    ],
+    hospital_and_wait: [
+      { label:'travel_to_care()', pct:23, desc:'Reaching care is part of the cost.' },
+      { label:'sit_in_queue()', pct:39, desc:'Institutional care introduces waiting.' },
+      { label:'return_home()', pct:38, desc:'Treatment often sends the burden back to the household.' }
+    ],
+    haul_water_fuel: [
+      { label:'walk_out()', pct:29, desc:'Reach the source.' },
+      { label:'load()', pct:24, desc:'Fill or bundle the load.' },
+      { label:'carry_home()', pct:47, desc:'Weight makes the return trip expensive.' }
+    ],
+    textile_work: [
+      { label:'spin()', pct:34, desc:'Thread production is repetitive and slow.' },
+      { label:'weave()', pct:29, desc:'Convert thread into usable cloth.' },
+      { label:'mend()', pct:37, desc:'Cloth stays in use through repair.' }
+    ],
+    repair_house_tools: [
+      { label:'inspect_damage()', pct:21, desc:'Find the failure point.' },
+      { label:'patch_or_replace()', pct:49, desc:'The repair itself takes most of the work.' },
+      { label:'test_and_reset()', pct:30, desc:'Check whether the fix holds.' }
+    ],
+    clean_and_preserve: [
+      { label:'scrub()', pct:34, desc:'Physical cleaning is the baseline.' },
+      { label:'dry_or_smoke()', pct:28, desc:'Stabilize materials against rot.' },
+      { label:'store()', pct:38, desc:'Preservation ends in proper storage.' }
+    ],
+    clean_and_laundry: [
+      { label:'sort_and_load()', pct:25, desc:'Gather the work before doing it.' },
+      { label:'wash()', pct:39, desc:'The main cleaning block.' },
+      { label:'dry_fold_putaway()', pct:36, desc:'The end of laundry is still labor.' }
+    ],
+    household_admin: [
+      { label:'check_accounts()', pct:27, desc:'Open the account layer.' },
+      { label:'pay_or_schedule()', pct:41, desc:'Bills, forms, bookings, renewals.' },
+      { label:'resolve_exceptions()', pct:32, desc:'Support chats, errors, and corrections.' }
+    ],
+    seasonal_move: [
+      { label:'pack_camp()', pct:29, desc:'Turn a camp into a carryable load.' },
+      { label:'walk_route()', pct:43, desc:'The move itself is mostly distance.' },
+      { label:'rebuild_camp()', pct:28, desc:'Arrival creates immediate setup work.' }
+    ],
+    daily_walking: [
+      { label:'walk_out()', pct:34, desc:'Leave the current point for the needed task.' },
+      { label:'carry_or_travel()', pct:38, desc:'The body itself does the transport.' },
+      { label:'walk_back()', pct:28, desc:'The return path is part of the job.' }
+    ],
+    flee_or_relocate: [
+      { label:'gather_what_matters()', pct:23, desc:'Take what can be carried.' },
+      { label:'move_under_stress()', pct:49, desc:'Urgent movement dominates the event.' },
+      { label:'start_again()', pct:28, desc:'Arrival means partial rebuilding.' }
+    ],
+    daily_foot_travel: [
+      { label:'leave_household()', pct:21, desc:'Ordinary tasks begin by leaving the dwelling.' },
+      { label:'walk_distance()', pct:52, desc:'Most of the cost is simply the distance.' },
+      { label:'return_loaded()', pct:27, desc:'The return leg often carries goods or fatigue.' }
+    ],
+    haul_to_market: [
+      { label:'load_goods()', pct:27, desc:'Prepare goods for the trip.' },
+      { label:'walk_or_ride()', pct:46, desc:'The route is most of the effort.' },
+      { label:'bring_back_supplies()', pct:27, desc:'Return with what the household needs.' }
+    ],
+    seasonal_or_forced_move: [
+      { label:'pack_household()', pct:24, desc:'Mobility starts with deciding what can come.' },
+      { label:'travel_with_load()', pct:44, desc:'The move itself dominates the work.' },
+      { label:'reestablish()', pct:32, desc:'New shelter, new routines, same obligations.' }
+    ],
+    pilgrimage_or_service: [
+      { label:'depart()', pct:19, desc:'Leave ordinary obligations behind.' },
+      { label:'travel_long_distance()', pct:58, desc:'The road is the main activity.' },
+      { label:'return_or_report()', pct:23, desc:'The obligation closes only after return.' }
+    ],
+    commute: [
+      { label:'leave()', pct:22, desc:'Pack up and enter the travel block.' },
+      { label:'sit_or_stand_in_transit()', pct:49, desc:'The bulk of modern movement is passive transit.' },
+      { label:'arrive_and_switch_context()', pct:29, desc:'Travel ends in another demanded role.' }
+    ],
+    labor_migration: [
+      { label:'leave_home()', pct:23, desc:'Economic movement starts with rupture.' },
+      { label:'travel_and_wait()', pct:38, desc:'Transit and delay dominate the middle.' },
+      { label:'find_new_routine()', pct:39, desc:'Arrival means rebuilding the life stack.' }
+    ],
+    military_or_state_transport: [
+      { label:'assembly()', pct:24, desc:'Bodies are gathered on schedule.' },
+      { label:'transport()', pct:45, desc:'Movement happens under institutional control.' },
+      { label:'disperse_or_deploy()', pct:31, desc:'Arrival leads directly into another imposed task.' }
+    ],
+    queue_and_transfer: [
+      { label:'wait_at_node()', pct:42, desc:'Stations and depots add idle time.' },
+      { label:'change_vehicle()', pct:21, desc:'Transfers break the trip into fragments.' },
+      { label:'continue_route()', pct:37, desc:'The trip resumes after the pause.' }
+    ],
+    move_homes_or_cities: [
+      { label:'pack()', pct:24, desc:'Sort, decide, box, discard.' },
+      { label:'transport_belongings()', pct:43, desc:'The move itself is the main labor.' },
+      { label:'unpack_and_reconnect()', pct:33, desc:'Arrival triggers setup and bureaucracy.' }
+    ],
+    migration_and_border_wait: [
+      { label:'travel()', pct:31, desc:'Movement toward the possible destination.' },
+      { label:'wait_for_clearance()', pct:37, desc:'Policy turns movement into suspended time.' },
+      { label:'rebuild_status()', pct:32, desc:'New documents, new work, new social footing.' }
+    ],
+    errands_and_pickups: [
+      { label:'drive_or_ride()', pct:42, desc:'Short fragmented trips add up.' },
+      { label:'wait_in_line()', pct:24, desc:'Errands include queue time.' },
+      { label:'return_and_put_away()', pct:34, desc:'The task is not over at the pickup.' }
+    ],
+    manage_devices: [
+      { label:'charge_update()', pct:28, desc:'Keep devices alive and current.' },
+      { label:'configure()', pct:31, desc:'Settings, permissions, and fixes.' },
+      { label:'recover_from_breakage()', pct:41, desc:'Passwords, glitches, and replacement loops.' }
+    ],
+    oral_memory: [
+      { label:'repeat()', pct:29, desc:'Keep the information alive through repetition.' },
+      { label:'teach()', pct:34, desc:'Move memory into another person.' },
+      { label:'recall_in_context()', pct:37, desc:'Knowledge is retrieved when needed.' }
+    ],
+    keep_accounts: [
+      { label:'count()', pct:26, desc:'Measure the holdings.' },
+      { label:'record()', pct:33, desc:'Write or mark the ledger.' },
+      { label:'reconcile()', pct:41, desc:'Resolve mismatch and claim.' }
+    ],
+    corvee_or_lord_labor: [
+      { label:'receive_order()', pct:18, desc:'The demand arrives from above.' },
+      { label:'perform_imposed_work()', pct:56, desc:'Time is extracted directly.' },
+      { label:'return_to_own_tasks()', pct:26, desc:'Your own stack resumes late and tired.' }
+    ],
+    slavery_or_serfdom: [
+      { label:'report_or_be_driven()', pct:19, desc:'The day starts under somebody else\'s command.' },
+      { label:'labor_under_watch()', pct:61, desc:'The core work block is not self-owned.' },
+      { label:'recover_with_little_control()', pct:20, desc:'Even off-hours are constrained.' }
+    ],
+    colonial_or_forced_labor: [
+      { label:'compulsory_arrival()', pct:21, desc:'Reach the site because you must.' },
+      { label:'perform_extracted_work()', pct:57, desc:'The labor primarily serves power above you.' },
+      { label:'absorb_exhaustion()', pct:22, desc:'The cost continues after the shift.' }
+    ],
+    manage_chronic_condition: [
+      { label:'take_meds_or_track()', pct:29, desc:'Routine management becomes part of the day.' },
+      { label:'work_with_limits()', pct:39, desc:'Symptoms stay present while other tasks continue.' },
+      { label:'adjust_plans()', pct:32, desc:'The condition reshapes the surrounding stack.' }
+    ],
+    appointments_and_waiting: [
+      { label:'book_or_confirm()', pct:23, desc:'Care starts with coordination.' },
+      { label:'sit_in_waiting_room()', pct:34, desc:'Institutional delay remains a real chunk.' },
+      { label:'follow_up_after_visit()', pct:43, desc:'Billing, prescriptions, and next steps continue the task.' }
+    ],
+    care_for_family_member: [
+      { label:'check_in()', pct:27, desc:'Monitoring condition is ongoing.' },
+      { label:'deliver_care_task()', pct:41, desc:'Meals, cleaning, meds, transport.' },
+      { label:'rearrange_own_day()', pct:32, desc:'Someone else\'s need restructures your time.' }
+    ],
+    fatigue_and_mental_load: [
+      { label:'slow_start()', pct:28, desc:'Low energy delays everything else.' },
+      { label:'push_through()', pct:39, desc:'Tasks still happen under drag.' },
+      { label:'crash_or_cancel()', pct:33, desc:'Some planned work never gets done.' }
+    ],
+    school: [
+      { label:'attend()', pct:39, desc:'Show up and remain in the institution.' },
+      { label:'complete_assignments()', pct:34, desc:'The actual task load.' },
+      { label:'test_and_report()', pct:27, desc:'Performance gets measured and recorded.' }
+    ],
+    paperwork: [
+      { label:'read_requirements()', pct:24, desc:'Decode what the form wants.' },
+      { label:'fill_fields()', pct:42, desc:'The main clerical step.' },
+      { label:'submit_and_wait()', pct:34, desc:'Administrative delay follows completion.' }
+    ],
+    email_and_chat: [
+      { label:'read_inbox()', pct:33, desc:'Scan and triage incoming messages.' },
+      { label:'reply()', pct:31, desc:'Compose the response.' },
+      { label:'follow_threads()', pct:36, desc:'The conversation keeps generating work.' }
+    ],
+    dashboard_work: [
+      { label:'open_metrics()', pct:24, desc:'Load the monitored view.' },
+      { label:'adjust_controls()', pct:37, desc:'Change parameters and settings.' },
+      { label:'report_results()', pct:39, desc:'Translate movement into status updates.' }
+    ],
+    optimize_google_ads: [
+      { label:'scan_campaigns()', pct:27, desc:'Review the current state of the account.' },
+      { label:'adjust_bids_copy()', pct:41, desc:'Change the levers that affect performance.' },
+      { label:'review_ctr_cost()', pct:32, desc:'Evaluate outcomes and iterate.' }
+    ]
+  };
+
+  if (explicit[childLabel]) return explicit[childLabel];
+
+  const fallbackByTop = {
+    sleep: [
+      { label:'lie_down()', pct:25, desc:'Get the body into a resting state.' },
+      { label:'sleep_through()', pct:50, desc:'The main uninterrupted sleep segment.' },
+      { label:'wake_up()', pct:25, desc:'Return from sleep into the waking stack.' }
+    ],
+    food: [
+      { label:'find_source()', pct:24, desc:'Locate the source of food or the channel to it.' },
+      { label:'get_edible_portion()', pct:51, desc:'The main step that turns effort into calories.' },
+      { label:'bring_food_back()', pct:25, desc:'Move the food into a place where it can be used.' }
+    ],
+    care: [
+      { label:'notice_need()', pct:24, desc:'Recognize what the child needs next.' },
+      { label:'attend_child()', pct:49, desc:'Most care is sustained attention and response.' },
+      { label:'clean_up_and_repeat()', pct:27, desc:'The loop resets and starts again.' }
+    ],
+    build: [
+      { label:'fetch_materials()', pct:26, desc:'Get the materials or tools into position.' },
+      { label:'repair_or_clean()', pct:46, desc:'The core upkeep step itself.' },
+      { label:'put_tools_away()', pct:28, desc:'Reset the space for the next cycle.' }
+    ],
+    social: [
+      { label:'start_exchange()', pct:24, desc:'Open the conversation or contact.' },
+      { label:'talk_or_negotiate()', pct:48, desc:'The main social exchange happens here.' },
+      { label:'leave_with_new_status()', pct:28, desc:'The relationship changes and persists.' }
+    ],
+    meaning: [
+      { label:'gather_group()', pct:22, desc:'Bring people into shared focus.' },
+      { label:'tell_or_perform()', pct:53, desc:'The story, game, or ritual act itself.' },
+      { label:'remember_it_after()', pct:25, desc:'Meaning carries forward after the event.' }
+    ],
+    coercion: [
+      { label:'spot_danger()', pct:23, desc:'Recognize that the normal stack is breaking.' },
+      { label:'fight_flee_or_submit()', pct:52, desc:'The core response under pressure.' },
+      { label:'deal_with_damage()', pct:25, desc:'Loss and fallout continue after the event.' }
+    ],
+    illness: [
+      { label:'notice_symptoms()', pct:22, desc:'First the body declares a problem.' },
+      { label:'endure_or_seek_help()', pct:51, desc:'Most of the time is coping, not instant cure.' },
+      { label:'recover_or_rearrange()', pct:27, desc:'After the acute phase, life is still altered.' }
+    ],
+    move: [
+      { label:'prepare_to_move()', pct:22, desc:'Movement starts with planning and gathering.' },
+      { label:'travel_or_wait()', pct:53, desc:'Most of the cost is transit plus delay.' },
+      { label:'arrive_and_reorient()', pct:25, desc:'Arrival starts another small stack.' }
+    ],
+    abstract: [
+      { label:'open_form_or_app()', pct:23, desc:'Enter the formal symbolic system.' },
+      { label:'fill_review_click()', pct:49, desc:'Most of the time is spent manipulating symbols.' },
+      { label:'submit_and_follow_up()', pct:28, desc:'Send the result onward and wait for the next demand.' }
+    ]
+  };
+
+  return fallbackByTop[topId];
+}
+
+function getGreatBlocks(topId, childLabel, grandLabel) {
+  const explicit = {
+    beat_sheaves: [
+      { label:'swing_tool()', pct:100, desc:'Repeated strikes detach grain from stalk.' }
+    ],
+    toss_chaff: [
+      { label:'lift_and_toss()', pct:100, desc:'Use air to separate the lighter material.' }
+    ],
+    bag_clean_grain: [
+      { label:'bag_and_stack()', pct:100, desc:'Move clean grain into storage and secure it.' }
+    ],
+    grind_meal: [
+      { label:'grind_pass()', pct:100, desc:'Repeated force reduces grain into meal.' }
+    ],
+    spin: [
+      { label:'draft_fiber()', pct:46, desc:'Pull out the fiber feed.' },
+      { label:'twist_thread()', pct:54, desc:'Turn loose fiber into usable thread.' }
+    ],
+    wash: [
+      { label:'run_cycle()', pct:100, desc:'The machine or wash step does the main work.' }
+    ],
+    fill_fields: [
+      { label:'type_and_confirm()', pct:100, desc:'Enter the symbolic payload and submit it.' }
+    ],
+    adjust_bids_copy: [
+      { label:'change_bid()', pct:47, desc:'Move the spend lever.' },
+      { label:'change_text()', pct:53, desc:'Adjust the message layer.' }
+    ],
+    read_inbox: [
+      { label:'open_messages()', pct:100, desc:'Read the actual contents of the queue.' }
+    ],
+    drive_and_wait: [
+      { label:'drive()', pct:100, desc:'Movement is the core cost.' }
+    ]
+  };
+
+  if (explicit[grandLabel]) return explicit[grandLabel];
+  return [];
+}
+
+function approxTotal(topPct, childPct) {
+  return ((topPct * childPct) / 100).toFixed(1);
+}
+
+function setStatus(html) {
+  statusLine.innerHTML = html;
+}
+
+function showHoverTag(label, event) {
+  hoverTag.textContent = label;
+  hoverTag.style.display = 'block';
+  moveHoverTag(event);
+}
+
+function moveHoverTag(event) {
+  if (hoverTag.style.display !== 'block') return;
+  const x = Math.min(event.clientX + 12, window.innerWidth - hoverTag.offsetWidth - 8);
+  const y = Math.min(event.clientY + 12, window.innerHeight - hoverTag.offsetHeight - 8);
+  hoverTag.style.left = `${x}px`;
+  hoverTag.style.top = `${y}px`;
+}
+
+function hideHoverTag() {
+  hoverTag.style.display = 'none';
+}
+
+function setPath() {
+  const top = getTopLevel(selectedTopLevelId);
+  const parts = ['human_activity()', top.label];
+  if (selectedChildLabel) parts.push(selectedChildLabel);
+  pathEl.innerHTML = `<strong>Call path</strong> ` + parts.map((part, index) => {
+    if (index === 0) return `<span class="path-part">${part}</span>`;
+    return `<span>&gt;</span><span class="path-part">${part}</span>`;
+  }).join('');
+}
+
+function setInspectorFrame(frame) {
+  if (!frame) {
+    inspector.innerHTML = `<div class="note">Hover a frame to sample. Click to pin the current sample.</div>`;
+    return;
+  }
+
+  const rows = frame.rows.map(([key, value]) =>
+    `<div class="k">${key}</div><div class="v">${value}</div>`
+  ).join('');
+
+  inspector.innerHTML = `
+    <div class="dump-title">FRAME ${frame.title}</div>
+    <div class="dump-grid">${rows}</div>
+    <div class="note" style="margin-top:8px;">${frame.note}</div>
+  `;
+}
+
+function frameDumpForTop(item) {
+  const breakdown = getBreakdown(currentEra, item.id);
+  return {
+    title: item.label,
+    rows: [
+      ['parent', 'human_activity()'],
+      ['era', ERAS[currentEra].name],
+      ['weight', `${item.pct}% of total`],
+      ['child frames', `${breakdown.blocks.length}`],
+      ['expanded child', selectedChildLabel || 'none']
+    ],
+    note: `${item.desc} ${item.note}`
+  };
+}
+
+function frameDumpForDetail(top, block) {
+  return {
+    title: block.label,
+    rows: [
+      ['parent', top.label],
+      ['era', ERAS[currentEra].name],
+      ['weight', `${block.pct}% of ${top.label}`],
+      ['approx', `~${approxTotal(top.pct, block.pct)}% of total`]
+    ],
+    note: block.desc
+  };
+}
+
+function frameDumpForGrand(top, child, block) {
+  return {
+    title: block.label,
+    rows: [
+      ['parent', child.label],
+      ['within', top.label],
+      ['era', ERAS[currentEra].name],
+      ['weight', `${block.pct}% of ${child.label}`],
+      ['approx', `~${scaledPct(top.pct, child.pct, block.pct).toFixed(1)}% of total`]
+    ],
+    note: block.desc
+  };
+}
+
+function frameDumpForGreat(top, child, grand, block) {
+  return {
+    title: block.label,
+    rows: [
+      ['parent', grand.label],
+      ['within', child.label],
+      ['top', top.label],
+      ['era', ERAS[currentEra].name],
+      ['weight', `${block.pct}% of ${grand.label}`],
+      ['approx', `~${scaledPct4(top.pct, child.pct, grand.pct, block.pct).toFixed(1)}% of total`]
+    ],
+    note: block.desc
+  };
+}
+
+function createFrame({ label, flex, tone, meta, rawLabel }, handlers = {}) {
+  const frame = document.createElement('div');
+  frame.className = `frame ${tone}`;
+  frame.style.flex = flex;
+  frame.dataset.label = (rawLabel || label).toLowerCase();
+  frame.title = label;
+
+  const name = document.createElement('div');
+  name.className = 'frame-name';
+  name.textContent = label;
+  frame.appendChild(name);
+
+  if (meta) {
+    const metaEl = document.createElement('div');
+    metaEl.className = 'frame-meta';
+    metaEl.textContent = meta;
+    frame.appendChild(metaEl);
+  }
+
+  if (handlers.mouseenter) frame.addEventListener('mouseenter', handlers.mouseenter);
+  frame.addEventListener('mouseenter', event => showHoverTag(label, event));
+  frame.addEventListener('mousemove', moveHoverTag);
+  frame.addEventListener('mouseleave', hideHoverTag);
+  if (handlers.click) frame.addEventListener('click', handlers.click);
+  return frame;
+}
+
+function applySearch() {
+  const q = searchInput.value.trim().toLowerCase();
+  document.querySelectorAll('.frame').forEach(frame => {
+    frame.classList.remove('dim', 'hit');
+    if (!q) return;
+    if (frame.dataset.label.includes(q)) frame.classList.add('hit');
+    else frame.classList.add('dim');
+  });
+}
+
+function renderEraBar() {
+  eraBar.innerHTML = '';
+  ERA_ORDER.forEach(eraId => {
+    const button = document.createElement('button');
+    button.className = 'era-btn';
+    if (eraId === currentEra) button.classList.add('active');
+    button.textContent = ERAS[eraId].name;
+    button.addEventListener('click', () => {
+      currentEra = eraId;
+      const stillExists = getBreakdown(currentEra, selectedTopLevelId).blocks.some(item => item.label === selectedChildLabel);
+      if (!stillExists) selectedChildLabel = null;
+      if (pinned && pinned.kind !== 'top' && !stillExists) {
+        pinned = { kind:'top', topId:selectedTopLevelId, era:currentEra };
+      }
+      update();
+    });
+    eraBar.appendChild(button);
+  });
+
+  const top = getTopLevel(selectedTopLevelId);
+  const breakdown = getBreakdown(currentEra, selectedTopLevelId);
+  eraNote.textContent = `${ERAS[currentEra].note} Selected: ${top.label}. ${breakdown.text}`;
+}
+
+function renderOverview() {
+  overviewGraph.innerHTML = '';
+  const top = getTopLevel(selectedTopLevelId);
+  const breakdown = getBreakdown(currentEra, selectedTopLevelId);
+
+  const rootRow = document.createElement('div');
+  rootRow.className = 'row row-root';
+  rootRow.appendChild(createFrame({ label:'human_activity()', flex:100, tone:'root' }));
+  overviewGraph.appendChild(rootRow);
+
+  const topRow = document.createElement('div');
+  topRow.className = 'row row-top';
+  TOP_LEVEL.forEach(item => {
+    const frame = createFrame(
+      { label:item.label, rawLabel:item.label, flex:item.pct, tone:item.tone, meta:`${item.pct}%` },
+      {
+        mouseenter: () => {
+          setStatus(`Function: <strong>${item.label}</strong> (${item.pct}% of total, within human_activity())`);
+          if (!pinned) setInspectorFrame(frameDumpForTop(item));
+        },
+        click: () => {
+          selectedTopLevelId = item.id;
+          selectedChildLabel = null;
+          pinned = { kind:'top', topId:item.id, era:currentEra };
+          setInspectorFrame(frameDumpForTop(item));
+          setStatus(`Pinned: <strong>${item.label}</strong> (${item.pct}% of total, era ${ERAS[currentEra].name})`);
+          update();
+        }
+      }
+    );
+
+    if (pinned && pinned.kind === 'top' && pinned.topId === item.id) frame.classList.add('pinned');
+    topRow.appendChild(frame);
+  });
+  overviewGraph.appendChild(topRow);
+
+  const childRow = document.createElement('div');
+  childRow.className = 'row row-child';
+  const prior = TOP_LEVEL
+    .slice(0, TOP_LEVEL.findIndex(item => item.id === top.id))
+    .reduce((sum, item) => sum + item.pct, 0);
+  const trailing = 100 - prior - top.pct;
+
+  if (prior > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    spacer.style.flex = prior;
+    childRow.appendChild(spacer);
+  }
+
+  breakdown.blocks.forEach(block => {
+    const scaled = (top.pct * block.pct) / 100;
+    const frame = createFrame(
+      { label:block.label, rawLabel:block.label, flex:scaled, tone:top.tone, meta:`~${approxTotal(top.pct, block.pct)}% total` },
+      {
+        mouseenter: () => {
+          setStatus(`Function: <strong>${block.label}</strong> (${block.pct}% of ${top.label}, ~${approxTotal(top.pct, block.pct)}% total, era ${ERAS[currentEra].name})`);
+          if (!pinned) setInspectorFrame(frameDumpForDetail(top, block));
+        },
+        click: () => {
+          selectedChildLabel = block.label;
+          pinned = { kind:'detail', topId:top.id, label:block.label, era:currentEra };
+          setInspectorFrame(frameDumpForDetail(top, block));
+          setStatus(`Pinned: <strong>${block.label}</strong> (${block.pct}% of ${top.label}, ~${approxTotal(top.pct, block.pct)}% total, era ${ERAS[currentEra].name})`);
+          update();
+        }
+      }
+    );
+
+    if ((selectedChildLabel && block.label === selectedChildLabel) ||
+        (pinned && pinned.kind === 'detail' && pinned.topId === top.id && pinned.label === block.label)) {
+      frame.classList.add('pinned');
+    }
+    childRow.appendChild(frame);
+  });
+
+  if (trailing > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    spacer.style.flex = trailing;
+    childRow.appendChild(spacer);
+  }
+
+  overviewGraph.appendChild(childRow);
+
+  const grandRow = document.createElement('div');
+  grandRow.className = 'row row-grandchild';
+
+  if (prior > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    spacer.style.flex = prior;
+    grandRow.appendChild(spacer);
+  }
+
+  breakdown.blocks.forEach(child => {
+    const nested = getNestedBlocks(top.id, child.label);
+    nested.forEach(block => {
+      const totalShare = scaledPct(top.pct, child.pct, block.pct);
+      const frame = createFrame(
+        {
+          label:block.label,
+          rawLabel:block.label,
+          flex:totalShare,
+          tone:top.tone
+        },
+        {
+          mouseenter: () => {
+            setStatus(`Function: <strong>${block.label}</strong> (${block.pct}% of ${child.label}, ~${totalShare.toFixed(1)}% total, era ${ERAS[currentEra].name})`);
+            if (!pinned) setInspectorFrame(frameDumpForGrand(top, child, block));
+          },
+          click: () => {
+            selectedChildLabel = child.label;
+            pinned = { kind:'grand', topId:top.id, childLabel:child.label, label:block.label, era:currentEra };
+            setInspectorFrame(frameDumpForGrand(top, child, block));
+            setStatus(`Pinned: <strong>${block.label}</strong> (${block.pct}% of ${child.label}, ~${totalShare.toFixed(1)}% total, era ${ERAS[currentEra].name})`);
+            update();
+          }
+        }
+      );
+
+      if (pinned && pinned.kind === 'grand' && pinned.topId === top.id && pinned.childLabel === child.label && pinned.label === block.label) {
+        frame.classList.add('pinned');
+      }
+
+      grandRow.appendChild(frame);
+    });
+  });
+
+  if (trailing > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    spacer.style.flex = trailing;
+    grandRow.appendChild(spacer);
+  }
+
+  overviewGraph.appendChild(grandRow);
+
+  const greatRow = document.createElement('div');
+  greatRow.className = 'row row-greatgrandchild';
+
+  if (prior > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    spacer.style.flex = prior;
+    greatRow.appendChild(spacer);
+  }
+
+  breakdown.blocks.forEach(child => {
+    const nested = getNestedBlocks(top.id, child.label);
+    nested.forEach(grand => {
+      const deeper = getGreatBlocks(top.id, child.label, grand.label);
+      const grandTotal = scaledPct(top.pct, child.pct, grand.pct);
+
+      if (!deeper.length) {
+        const spacer = document.createElement('div');
+        spacer.className = 'spacer';
+        spacer.style.flex = grandTotal;
+        greatRow.appendChild(spacer);
+        return;
+      }
+
+      deeper.forEach(block => {
+        const totalShare = scaledPct4(top.pct, child.pct, grand.pct, block.pct);
+        const frame = createFrame(
+          {
+            label:block.label,
+            rawLabel:block.label,
+            flex:totalShare,
+            tone:top.tone
+          },
+          {
+            mouseenter: () => {
+              setStatus(`Function: <strong>${block.label}</strong> (${block.pct}% of ${grand.label}, ~${totalShare.toFixed(1)}% total, era ${ERAS[currentEra].name})`);
+              if (!pinned) setInspectorFrame(frameDumpForGreat(top, child, grand, block));
+            },
+            click: () => {
+              selectedChildLabel = child.label;
+              pinned = { kind:'great', topId:top.id, childLabel:child.label, grandLabel:grand.label, label:block.label, era:currentEra };
+              setInspectorFrame(frameDumpForGreat(top, child, grand, block));
+              setStatus(`Pinned: <strong>${block.label}</strong> (${block.pct}% of ${grand.label}, ~${totalShare.toFixed(1)}% total, era ${ERAS[currentEra].name})`);
+              update();
+            }
+          }
+        );
+
+        if (pinned && pinned.kind === 'great' && pinned.topId === top.id && pinned.childLabel === child.label && pinned.grandLabel === grand.label && pinned.label === block.label) {
+          frame.classList.add('pinned');
+        }
+
+        greatRow.appendChild(frame);
+      });
+    });
+  });
+
+  if (trailing > 0) {
+    const spacer = document.createElement('div');
+    spacer.className = 'spacer';
+    spacer.style.flex = trailing;
+    greatRow.appendChild(spacer);
+  }
+
+  overviewGraph.appendChild(greatRow);
+}
+
+function updatePinnedInspector() {
+  if (!pinned) {
+    setInspectorFrame(null);
+    setStatus('Function: hover a frame to inspect | click to pin | / to find | left/right to change era');
+    return;
+  }
+
+  const top = getTopLevel(pinned.topId || selectedTopLevelId);
+  if (pinned.kind === 'top') {
+    setInspectorFrame(frameDumpForTop(top));
+    setStatus(`Pinned: <strong>${top.label}</strong> (${top.pct}% of total, era ${ERAS[currentEra].name})`);
+    return;
+  }
+
+  if (pinned.kind === 'detail') {
+    const block = getBreakdown(currentEra, top.id).blocks.find(item => item.label === pinned.label);
+    if (block) {
+      setInspectorFrame(frameDumpForDetail(top, block));
+      setStatus(`Pinned: <strong>${block.label}</strong> (${block.pct}% of ${top.label}, ~${approxTotal(top.pct, block.pct)}% total, era ${ERAS[currentEra].name})`);
+    }
+    return;
+  }
+
+  if (pinned.kind === 'grand') {
+    const child = getBreakdown(currentEra, top.id).blocks.find(item => item.label === pinned.childLabel);
+    if (child) {
+      const grand = getNestedBlocks(top.id, child.label).find(item => item.label === pinned.label);
+      if (grand) {
+        setInspectorFrame(frameDumpForGrand(top, child, grand));
+        setStatus(`Pinned: <strong>${grand.label}</strong> (${grand.pct}% of ${child.label}, ~${scaledPct(top.pct, child.pct, grand.pct).toFixed(1)}% total, era ${ERAS[currentEra].name})`);
+      }
+    }
+    return;
+  }
+
+  if (pinned.kind === 'great') {
+    const child = getBreakdown(currentEra, top.id).blocks.find(item => item.label === pinned.childLabel);
+    if (child) {
+      const grand = getNestedBlocks(top.id, child.label).find(item => item.label === pinned.grandLabel);
+      if (grand) {
+        const great = getGreatBlocks(top.id, child.label, grand.label).find(item => item.label === pinned.label);
+        if (great) {
+          setInspectorFrame(frameDumpForGreat(top, child, grand, great));
+          setStatus(`Pinned: <strong>${great.label}</strong> (${great.pct}% of ${grand.label}, ~${scaledPct4(top.pct, child.pct, grand.pct, great.pct).toFixed(1)}% total, era ${ERAS[currentEra].name})`);
+        }
+      }
+    }
+  }
+}
+
+function update() {
+  setPath();
+  renderEraBar();
+  renderOverview();
+  applySearch();
+  updatePinnedInspector();
+}
+
+searchInput.addEventListener('input', applySearch);
+
+resetBtn.addEventListener('click', () => {
+  pinned = null;
+  selectedChildLabel = null;
+  update();
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key === '/') {
+    event.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    searchInput.value = '';
+    pinned = null;
+    selectedChildLabel = null;
+    update();
+    return;
+  }
+
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    const index = ERA_ORDER.indexOf(currentEra);
+    const next = event.key === 'ArrowRight'
+      ? Math.min(index + 1, ERA_ORDER.length - 1)
+      : Math.max(index - 1, 0);
+    currentEra = ERA_ORDER[next];
+    const stillExists = getBreakdown(currentEra, selectedTopLevelId).blocks.some(item => item.label === selectedChildLabel);
+    if (!stillExists) selectedChildLabel = null;
+    if (pinned && pinned.kind !== 'top' && !stillExists) {
+      pinned = { kind:'top', topId:selectedTopLevelId, era:currentEra };
+    }
+    update();
+  }
+});
+
+update();
+</script>
+</body>
+</html>
